@@ -8,11 +8,11 @@ from transformers import DPTImageProcessor, DPTForDepthEstimation
 # Inisialisasi Aplikasi FastAPI
 app = FastAPI(title="Contour Checker API")
 
-# Load model di awal agar tidak perlu loading berulang kali saat ada request
+# Load model di awal agar standby
 print("Loading model MiDaS...")
 processor = DPTImageProcessor.from_pretrained("Intel/dpt-hybrid-midas")
 model = DPTForDepthEstimation.from_pretrained("Intel/dpt-hybrid-midas")
-print("Model berhasil dimuat dan siap menerima gambar!")
+print("Model berhasil dimuat dan siap menerima gambar dari Flutter!")
 
 @app.post("/process-image/")
 async def process_image(file: UploadFile = File(...)):
@@ -42,15 +42,15 @@ async def process_image(file: UploadFile = File(...)):
     depth_map = prediction.squeeze().cpu().numpy()
     depth_map_normalized = cv2.normalize(depth_map, None, 0, 255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
     
-    # 3. Smoothing & Ekstraksi Garis Kontur Berwarna (Sama persis dengan kodemu)
-    smoothed_depth = cv2.GaussianBlur(depth_map_normalized, (21, 21), 0)
+    # 3. Smoothing & Ekstraksi Garis Kontur Berwarna
+    smoothed_depth = cv2.bilateralFilter(depth_map_normalized, 9, 75, 75)
     
     palette = np.arange(0, 256, dtype=np.uint8).reshape(1, 256, 1)
     colormap_jet = cv2.applyColorMap(palette, cv2.COLORMAP_JET)
     colormap_rgb = cv2.cvtColor(colormap_jet, cv2.COLOR_BGR2RGB).squeeze()
     
     final_output = img_rgb.copy()
-    num_levels = 15
+    num_levels = 25
     step = 255 // num_levels
     
     for i in range(step, 255, step):
